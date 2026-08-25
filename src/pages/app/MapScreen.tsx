@@ -1,7 +1,7 @@
 import { useMemo, useState, lazy, Suspense } from 'react';
 import { DEMO_PROFILES } from '@/lib/demoData';
 import { useApp } from '@/store/AppStore';
-import { DemoProfile, INTENT_LABEL, LOOKING_FOR_LABEL, Vibe, VIBE_LABEL } from '@/lib/types';
+import { DemoProfile, Gender, INTENT_LABEL, LOOKING_FOR_LABEL, Vibe, VIBE_LABEL } from '@/lib/types';
 import { TrustBadge } from '@/components/neara/Brand';
 import { NButton } from '@/components/neara/NButton';
 const NearaMapGL = lazy(() => import('@/components/neara/NearaMapGL').then((m) => ({ default: m.NearaMapGL })));
@@ -12,6 +12,20 @@ import { Ghost, Shield, Palette, X, Flag, EyeOff, BadgeCheck, Plane, AlertTriang
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { playSoundForEvent } from '@/lib/sounds';
+
+function legacyGenderLens(interestedIn: string): Gender[] {
+  if (interestedIn === 'women') return ['woman'];
+  if (interestedIn === 'men') return ['man'];
+  if (interestedIn === 'nonbinary') return ['nonbinary'];
+  return [];
+}
+
+const GENDER_LABEL: Partial<Record<Gender, string>> = {
+  woman: 'Women',
+  man: 'Men',
+  nonbinary: 'Nonbinary',
+  other: 'Other',
+};
 
 export default function MapScreen() {
   const { hiddenIds, blockedIds, sendSignal, signalsLeft, signalsLimit, signalCooldownLeft, hide, user, setUser, hideMeNow, profileComplete } = useApp();
@@ -24,8 +38,18 @@ export default function MapScreen() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const f = user.filters;
+  const genderLens = useMemo(
+    () => f.genders ?? legacyGenderLens(user.interestedIn),
+    [f.genders, user.interestedIn]
+  );
+  const genderLensLabel = genderLens.length
+    ? genderLens.map(g => GENDER_LABEL[g] ?? 'Other').join(' + ')
+    : 'Everyone';
+
   const visible = useMemo(() => DEMO_PROFILES.filter(p => {
     if (hiddenIds.includes(p.id) || blockedIds.includes(p.id)) return false;
+    // One shared network, personalized per viewer: gender settings only change this user's map.
+    if (genderLens.length && !genderLens.includes(p.gender)) return false;
     if (user.verifiedOnlyFilter && !p.verified) return false;
     if (f.verifiedOnly && !p.verified) return false;
     if (p.age < f.ageMin || p.age > f.ageMax) return false;
@@ -35,9 +59,10 @@ export default function MapScreen() {
     if (f.interests.length && !p.interests.some(i => f.interests.includes(i))) return false;
     if (f.zoneRadius <= 1 && !p.nearby_zone) return false;
     return true;
-  }), [hiddenIds, blockedIds, user.verifiedOnlyFilter, f]);
+  }), [hiddenIds, blockedIds, user.verifiedOnlyFilter, f, genderLens]);
 
   const activeFilterCount =
+    (genderLens.length ? 1 : 0) +
     (f.verifiedOnly ? 1 : 0) +
     (f.vibes.length ? 1 : 0) +
     (f.intents.length ? 1 : 0) +
@@ -74,7 +99,7 @@ export default function MapScreen() {
       </button>
       <button onClick={() => setFiltersOpen(true)}
         className={`relative w-10 h-10 rounded-full glass-strong flex items-center justify-center hover:border-primary/50 transition lift-on-tap ${activeFilterCount ? 'ring-glow border-primary/60' : ''}`}
-        title="Filters">
+        title="Your map filters">
         <SlidersHorizontal className="w-4 h-4" />
         {activeFilterCount > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-semibold flex items-center justify-center">{activeFilterCount}</span>
@@ -85,6 +110,11 @@ export default function MapScreen() {
 
   const banners = (
     <>
+      <button onClick={() => setFiltersOpen(true)}
+        className="glass-strong rounded-full px-3 py-1.5 flex items-center gap-1.5 text-[11px] border border-primary/30 hover:border-primary/60 transition">
+        <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+        My map: {genderLensLabel}
+      </button>
       <button onClick={() => setVibeOpen(true)}
         className="glass-strong rounded-full px-3 py-1.5 flex items-center gap-1.5 text-[11px] border border-primary/30 hover:border-primary/60 transition">
         <Sparkles className="w-3.5 h-3.5 text-primary" />
@@ -235,7 +265,7 @@ function ProfileSheet({ profile, onClose, onSignal, onHide, onReport }: {
         <div className="mt-3 glass rounded-2xl p-4">
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">About me</p>
           <div className="flex flex-wrap gap-2">
-            {profile.height_cm && <Chip icon={Ruler}>{`${Math.floor(profile.height_cm/2.54/12)}'${Math.round(profile.height_cm/2.54)%12}"`}</Chip>}
+            {profile.height_cm && <Chip icon={Ruler}>{`${Math.floor(profile.height_cm/2.54/12)}'${Math.round(profile.height_cm/2.54)%12}\"`}</Chip>}
             {profile.activity && <Chip>{profile.activity}</Chip>}
             {profile.education && <Chip icon={GraduationCap}>{profile.education}</Chip>}
             {profile.drinking && <Chip icon={Wine}>{profile.drinking}</Chip>}

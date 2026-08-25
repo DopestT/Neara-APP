@@ -6,7 +6,7 @@ import { NField, NTextarea, ChipSelect } from '@/components/neara/NField';
 import { PhotoUploader } from '@/components/neara/PhotoUploader';
 import { ProfileStrength } from '@/components/neara/ProfileStrength';
 import { RelationshipIntent, Vibe, VIBE_LABEL } from '@/lib/types';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 
 const INTENT_OPTS: { value: RelationshipIntent; label: string }[] = [
@@ -78,11 +78,17 @@ export default function EditProfile() {
             {value:'woman',label:'Woman'},{value:'man',label:'Man'},{value:'nonbinary',label:'Nonbinary'},{value:'other',label:'Other'},{value:'prefer_not_to_say',label:'Prefer not to say'},
           ]} />
         </div>
-        <div className="space-y-2">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Interested in</span>
+        <div className="space-y-2 glass rounded-2xl p-4 border border-primary/20">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Initial map preference</span>
+          </div>
           <ChipSelect value={interestedIn} onChange={setInterestedIn} options={[
-            {value:'women',label:'Women'},{value:'men',label:'Men'},{value:'everyone',label:'Everyone'},{value:'custom',label:'Custom'},
+            {value:'women',label:'Women'},{value:'men',label:'Men'},{value:'nonbinary',label:'Nonbinary'},{value:'everyone',label:'Everyone'},{value:'custom',label:'Choose later'},
           ]} />
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Private setting. It controls only what you see on your Neara map. It is not shown on your profile and does not create a separate network.
+          </p>
         </div>
         <div className="space-y-2">
           <span className="text-xs uppercase tracking-widest text-muted-foreground">Looking for</span>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { X, SlidersHorizontal, Crown, BadgeCheck, Ruler, Heart, Sparkles, Tag } from 'lucide-react';
+import { X, SlidersHorizontal, Crown, BadgeCheck, Ruler, Heart, Sparkles } from 'lucide-react';
 import { useApp } from '@/store/AppStore';
 import { DEFAULT_FILTERS } from '@/store/AppStore';
-import { DiscoveryFilters, LOOKING_FOR_LABEL, LookingFor, VIBE_LABEL, Vibe, ZONE_RADIUS_LABEL } from '@/lib/types';
+import { DiscoveryFilters, Gender, LOOKING_FOR_LABEL, LookingFor, VIBE_LABEL, Vibe, ZONE_RADIUS_LABEL } from '@/lib/types';
 import { INTEREST_POOL } from '@/lib/demoData';
 import { NButton } from './NButton';
 import { Slider } from '@/components/ui/slider';
@@ -11,8 +11,22 @@ import { cn } from '@/lib/utils';
 
 const cmToFtIn = (cm: number) => {
   const totalIn = Math.round(cm / 2.54);
-  return `${Math.floor(totalIn / 12)}'${totalIn % 12}"`;
+  return `${Math.floor(totalIn / 12)}'${totalIn % 12}\"`;
 };
+
+const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: 'woman', label: 'Women' },
+  { value: 'man', label: 'Men' },
+  { value: 'nonbinary', label: 'Nonbinary' },
+  { value: 'other', label: 'Other' },
+];
+
+function legacyGenderLens(interestedIn: string): Gender[] {
+  if (interestedIn === 'women') return ['woman'];
+  if (interestedIn === 'men') return ['man'];
+  if (interestedIn === 'nonbinary') return ['nonbinary'];
+  return [];
+}
 
 export function FiltersSheet({ open, onClose, onPaywall }: {
   open: boolean;
@@ -21,23 +35,27 @@ export function FiltersSheet({ open, onClose, onPaywall }: {
 }) {
   const { user, setUser } = useApp();
   const [tab, setTab] = useState<'basic' | 'advanced'>('basic');
-  const [draft, setDraft] = useState<DiscoveryFilters>(user.filters);
+  const [draft, setDraft] = useState<DiscoveryFilters>({
+    ...user.filters,
+    genders: user.filters.genders ?? legacyGenderLens(user.interestedIn),
+  });
 
   if (!open) return null;
 
   const update = <K extends keyof DiscoveryFilters>(k: K, v: DiscoveryFilters[K]) => setDraft(d => ({ ...d, [k]: v }));
 
   const apply = () => { setUser({ filters: draft }); onClose(); };
-  const reset = () => setDraft(DEFAULT_FILTERS);
+  const reset = () => setDraft({ ...DEFAULT_FILTERS, genders: [] });
 
   const isAdvancedLocked = !user.premium && tab === 'advanced';
+  const selectedGenders = draft.genders ?? [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm animate-fade-in" onClick={onClose}>
       <div className="w-full max-w-md glass-strong rounded-t-3xl max-h-[92dvh] flex flex-col animate-fade-up" onClick={e => e.stopPropagation()}>
         <div className="p-5 pb-3 flex items-center justify-between border-b border-border/40">
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-secondary/60 flex items-center justify-center"><X className="w-4 h-4" /></button>
-          <h2 className="font-display text-lg flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-primary" />Narrow your search</h2>
+          <h2 className="font-display text-lg flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-primary" />Your map</h2>
           <button onClick={reset} className="text-xs text-muted-foreground hover:text-foreground transition">Reset</button>
         </div>
 
@@ -57,14 +75,50 @@ export function FiltersSheet({ open, onClose, onPaywall }: {
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6 relative">
           {tab === 'basic' && (
             <>
-              <Field label="Who would you like to meet?">
-                <select value={user.interestedIn} onChange={e => setUser({ interestedIn: e.target.value })}
-                  className="w-full h-12 rounded-2xl bg-secondary/40 border border-border px-4 text-sm focus:outline-none focus:border-primary/60">
-                  <option value="">Everyone</option>
-                  <option value="women">Women</option>
-                  <option value="men">Men</option>
-                  <option value="nonbinary">Non-binary</option>
-                </select>
+              <Field
+                label="Who do you want on your map?"
+                sub="This changes only what you see. Neara stays one shared live network for everyone."
+              >
+                <div className="glass rounded-2xl p-3 space-y-2">
+                  <button
+                    onClick={() => update('genders', [])}
+                    className={cn(
+                      'w-full px-3 h-10 rounded-xl text-sm border transition text-left',
+                      selectedGenders.length === 0
+                        ? 'bg-gradient-accent text-primary-foreground border-transparent shadow-glow'
+                        : 'bg-secondary/40 border-border text-foreground/85 hover:border-primary/40'
+                    )}
+                  >
+                    Everyone
+                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    {GENDER_OPTIONS.map(option => {
+                      const on = selectedGenders.includes(option.value);
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => update(
+                            'genders',
+                            on
+                              ? selectedGenders.filter(g => g !== option.value)
+                              : [...selectedGenders, option.value]
+                          )}
+                          className={cn(
+                            'px-3 h-10 rounded-xl text-sm border transition',
+                            on
+                              ? 'bg-gradient-accent text-primary-foreground border-transparent shadow-glow'
+                              : 'bg-secondary/40 border-border text-foreground/85 hover:border-primary/40'
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground px-1 pt-1">
+                    Your choices are a private discovery lens. They never create a separate straight, gay, lesbian, bisexual, or other Neara map.
+                  </p>
+                </div>
               </Field>
 
               <Field label="How old are they?">
@@ -175,7 +229,7 @@ export function FiltersSheet({ open, onClose, onPaywall }: {
               <Crown className="w-4 h-4 mr-2" />Unlock Premium
             </NButton>
           ) : (
-            <NButton full size="lg" onClick={apply}>Apply filters</NButton>
+            <NButton full size="lg" onClick={apply}>Apply to my map</NButton>
           )}
         </div>
       </div>

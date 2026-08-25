@@ -1,7 +1,7 @@
 export type AccentTheme = 'violet' | 'teal' | 'gold' | 'pink' | 'mint';
 export type RelationshipIntent = 'tonight' | 'this_week' | 'open_to_chat' | 'casual' | 'see_where_it_goes';
 export type Gender = 'woman' | 'man' | 'nonbinary' | 'other' | 'prefer_not_to_say';
-export type InterestedIn = 'women' | 'men' | 'everyone' | 'custom';
+export type InterestedIn = 'women' | 'men' | 'nonbinary' | 'everyone' | 'custom';
 export type VisibilityMode = 'visible' | 'ghost' | 'invisible_until_match' | 'paused' | 'travel';
 export type PrivacyRadius = 'standard' | 'private' | 'extra_private';
 export type SignalStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled' | 'blocked';
@@ -94,6 +94,12 @@ export interface DiscoveryFilters {
   vibes: Vibe[];
   verifiedOnly: boolean;
   expandIfQuiet: boolean;
+  /**
+   * Personal map lens only. Empty/undefined means show every gender.
+   * This setting never partitions the network and is never used to decide
+   * who is allowed to appear on somebody else's map.
+   */
+  genders?: Gender[];
 }
 
 export const ZONE_RADIUS_LABEL: Record<DiscoveryFilters['zoneRadius'], string> = {
